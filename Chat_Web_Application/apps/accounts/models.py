@@ -2,26 +2,12 @@
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 from django.db import models
 
+class TimeStampedModel(models.Model):
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
-# class UserManager(BaseUserManager):
-#     def create_user(self, email, username, password=None, phone_number=None, **extra_fields):
-#         if not email:
-#             raise ValueError("Email is required")
-
-#         email = self.normalize_email(email)
-#         user = self.model(email=email, username=username, phone_number=phone_number, **extra_fields)
-#         user.set_password(password)
-#         user.save(using=self._db)
-#         return user
-
-#     def create_superuser(self, email, username, password=None, phone_number=None, **extra_fields):
-#         user = self.create_user(email, username, password, phone_number, **extra_fields)
-#         user.is_staff = True
-#         user.is_superuser = True
-#         user.save(using=self._db)
-#         return user
-from django.contrib.auth.models import BaseUserManager
-
+    class Meta:
+        abstract = True
 
 class UserManager(BaseUserManager):
 
@@ -83,11 +69,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
     user_name = models.CharField(max_length=150, unique=True)
     phone_number = models.CharField(max_length=20, null=True, blank=True)
-
+    profile_image = models.ImageField(upload_to="profiles/", null=True, blank=True)
     # Chat-specific fields
     is_online = models.BooleanField(default=False)
     last_seen = models.DateTimeField(null=True, blank=True)
-    profile_image = models.ImageField(upload_to="profiles/", null=True, blank=True)
     
     class Roles(models.TextChoices):
         ADMIN = "ADMIN", "Admin"

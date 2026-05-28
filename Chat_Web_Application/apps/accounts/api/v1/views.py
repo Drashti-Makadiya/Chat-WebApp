@@ -3,7 +3,9 @@ from apps.utils.api_response import api_response
 from apps.accounts.models import User
 from apps.accounts.api.v1.serializers import *
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
-
+from rest_framework.permissions import IsAuthenticated
+from apps.accounts.permissions import IsCustomer, IsAdmin
+from rest_framework.parsers import MultiPartParser, FormParser
 @extend_schema(
     request=RegisterSerializer,
     responses={
@@ -13,6 +15,7 @@ from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParamet
     tags=["Accounts"],
 )
 class RegisterView(APIView):
+    parser_classes = [MultiPartParser, FormParser]  # To handle file uploads
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
@@ -58,3 +61,33 @@ class LoginView(APIView):
                 errors=serializer.errors
             )
 
+@extend_schema(
+    tags = ["Accounts"],
+    summary="Customer Logout",
+    description="Logout the authenticated user by blacklisting their refresh token.",
+    request=LogoutSerializer,
+    responses={
+        200: {"description": "Logout Successful"},
+        400: {"description": "Invalid or already blacklisted token"},
+    },
+)
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]  # Only logged-in users can logout
+
+    def post(self, request):
+        serializer = LogoutSerializer(data=request.data)
+        if serializer.is_valid():
+            return api_response(
+                success=True,
+                message="Logout successfully!",
+                data=None,
+                errors=None,
+                status_code=200
+            )
+        return api_response(
+            success=False, 
+            message="Logout failed!",
+            data=None,
+            errors=serializer.errors,
+            status_code=400
+        )

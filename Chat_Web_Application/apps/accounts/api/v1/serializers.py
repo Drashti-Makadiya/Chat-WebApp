@@ -8,6 +8,7 @@ import re
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
+from rest_framework_simplejwt.exceptions import TokenError
 
 def validate_password_min8_with_special(password, user=None):
     if len(password) < 8:
@@ -37,11 +38,12 @@ class RegisterSerializer(serializers.ModelSerializer):
         MinLengthValidator(10, message="Phone number must be at least 10 digits long."),
         RegexValidator(r'^\+?1?\d{9,15}$', message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.")
     ])
+    profile_image = serializers.ImageField(allow_null=True, required=False)
     
 
     class Meta:
         model = User
-        fields = ["email", "user_name", "password","password2", "phone_number"]
+        fields = ["email", "user_name", "password","password2", "phone_number", "profile_image"]
     
     def validate_email(self, value):
         email = value.lower()
@@ -67,6 +69,7 @@ class RegisterSerializer(serializers.ModelSerializer):
             email=validated_data["email"],
             user_name=validated_data["user_name"],
             password=validated_data["password"],
+            profile_image=validated_data.get("profile_image"),
             phone_number=validated_data.get("phone_number")
         )
         return user
@@ -114,3 +117,16 @@ class LoginResponseSerializer(serializers.Serializer):
     access_token = serializers.CharField()
     refresh_token = serializers.CharField()
     user = CommonUserResponseSerializer()
+
+
+class LogoutSerializer(serializers.Serializer):
+    refresh_token = serializers.CharField(required=True)
+    def validate(self, attrs):
+        try:
+            token = RefreshToken(attrs["refresh_token"])
+            token.blacklist()  # Blacklist the refresh token on the server
+        except TokenError:
+            raise serializers.ValidationError(
+                {"refresh_token": "Token is invalid or has already been blacklisted."}
+            )
+        return attrs
