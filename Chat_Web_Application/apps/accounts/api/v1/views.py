@@ -38,7 +38,7 @@ class LoginView(APIView):
             serializer.is_valid(raise_exception=True)
             
             user = serializer.validated_data["user"]
-            if user.role in [User.Role.CUSTOMER, User.Role.ADMIN, User.Role.SUPER_ADMIN]:
+            if user.role in [User.Roles.CUSTOMER, User.Roles.ADMIN]:
                 data = {
                     "access_token": serializer.validated_data["access"],
                     "refresh_token": serializer.validated_data["refresh"],

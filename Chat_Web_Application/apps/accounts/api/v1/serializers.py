@@ -28,7 +28,7 @@ def validate_password_min8_with_special(password, user=None):
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, validators=[validate_password_min8_with_special])
     password2 = serializers.CharField(write_only=True, required=True)
-    username = serializers.CharField(required=True)
+    user_name = serializers.CharField(required=True)
     email = serializers.EmailField(required=True, validators=[RegexValidator(
         regex=r'^[\w\.-]+@[\w\.-]+\.\w+$',
         message="Enter a valid email address."
@@ -41,7 +41,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["email", "username", "password","password2", "phone_number"]
+        fields = ["email", "user_name", "password","password2", "phone_number"]
     
     def validate_email(self, value):
         email = value.lower()
@@ -65,7 +65,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         validated_data.pop("password2", None)
         user = User.objects.create_user(
             email=validated_data["email"],
-            username=validated_data["username"],
+            user_name=validated_data["user_name"],
             password=validated_data["password"],
             phone_number=validated_data.get("phone_number")
         )
@@ -76,24 +76,33 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
 
     def validate(self, attrs):
-        email = attrs.get("email","").lower().strip()   
+
+        email = attrs.get("email", "").lower().strip()
         password = attrs.get("password")
 
-        user = authenticate(request=self.context.get("request"), username=email, password=password)
+        user = authenticate(
+            request=self.context.get("request"),
+            username=email,
+            password=password
+        )
+
         if not user:
-            raise serializers.ValidationError("Invalid email or password")
-        elif password and not user.check_password(password):
-            raise serializers.ValidationError("Invalid email or password")
-        elif not user.check_password(password):
-            raise serializers.ValidationError("Invalid email or password")
-        elif not user.is_active:
-            raise serializers.ValidationError("User account is disabled")
+            raise serializers.ValidationError(
+                "Invalid email or password"
+            )
+
+        if not user.is_active:
+            raise serializers.ValidationError(
+                "User account is disabled"
+            )
+
         refresh = RefreshToken.for_user(user)
+
         return {
             "user": user,
             "access": str(refresh.access_token),
-            "refresh": str(refresh)
-        }    
+            "refresh": str(refresh),
+        }
         
 class CommonUserResponseSerializer(serializers.Serializer):
     id = serializers.IntegerField()

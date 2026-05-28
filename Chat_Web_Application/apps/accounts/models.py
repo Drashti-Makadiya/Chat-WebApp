@@ -20,30 +20,30 @@ from django.db import models
 #         user.is_superuser = True
 #         user.save(using=self._db)
 #         return user
+from django.contrib.auth.models import BaseUserManager
+
+
 class UserManager(BaseUserManager):
 
     def create_user(
         self,
         email,
-        username,
+        user_name,
         password=None,
         **extra_fields
     ):
-        """
-        Create and return a regular user.
-        """
 
         if not email:
             raise ValueError("Email field is required")
 
-        if not username:
-            raise ValueError("Username field is required")
+        if not user_name:
+            raise ValueError("User name field is required")
 
         email = self.normalize_email(email)
 
         user = self.model(
             email=email,
-            username=username,
+            user_name=user_name,
             **extra_fields
         )
 
@@ -55,18 +55,15 @@ class UserManager(BaseUserManager):
     def create_superuser(
         self,
         email,
-        username,
+        user_name,
         password=None,
         **extra_fields
     ):
-        """
-        Create and return a superuser.
-        """
 
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
         extra_fields.setdefault("is_active", True)
-        extra_fields.setdefault("role", "admin")
+        extra_fields.setdefault("role", User.Roles.ADMIN)
 
         if extra_fields.get("is_staff") is not True:
             raise ValueError("Superuser must have is_staff=True")
@@ -74,19 +71,17 @@ class UserManager(BaseUserManager):
         if extra_fields.get("is_superuser") is not True:
             raise ValueError("Superuser must have is_superuser=True")
 
-        user = self.create_user(
+        return self.create_user(
             email=email,
-            username=username,
+            user_name=user_name,
             password=password,
             **extra_fields
         )
 
-        return user
-
-
 class User(AbstractBaseUser, PermissionsMixin):
+    username = None
     email = models.EmailField(unique=True)
-    username = models.CharField(max_length=150, unique=True)
+    user_name = models.CharField(max_length=150, unique=True)
     phone_number = models.CharField(max_length=20, null=True, blank=True)
 
     # Chat-specific fields
@@ -95,10 +90,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     profile_image = models.ImageField(upload_to="profiles/", null=True, blank=True)
     
     class Roles(models.TextChoices):
-        USER = "user", "User"
-        ADMIN = "admin", "Admin"
-    role = models.CharField(max_length=50, default="user", choices=Roles.choices)  # e.g., user, admin, moderator
-    
+        ADMIN = "ADMIN", "Admin"
+        CUSTOMER = "CUSTOMER", "Customer"
+    role = models.CharField(max_length=50, default=Roles.CUSTOMER, choices=Roles.choices)  # e.g., customer, admin, moderator
+
 
     # Django required fields
     is_active = models.BooleanField(default=True)
@@ -109,7 +104,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     objects = UserManager()
 
     USERNAME_FIELD = "email"      # login with email
-    REQUIRED_FIELDS = ["username"]
+    REQUIRED_FIELDS = ["user_name"]
 
     def __str__(self):
         return self.email
