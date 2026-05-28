@@ -6,6 +6,8 @@ from django.core.validators import MinLengthValidator, RegexValidator
 from django.core.exceptions import ValidationError
 import re
 from django.core.exceptions import ValidationError as DjangoValidationError
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import authenticate
 
 def validate_password_min8_with_special(password, user=None):
     if len(password) < 8:
@@ -68,3 +70,38 @@ class RegisterSerializer(serializers.ModelSerializer):
             phone_number=validated_data.get("phone_number")
         )
         return user
+    
+class LoginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        email = attrs.get("email","").lower().strip()   
+        password = attrs.get("password")
+
+        user = authenticate(request=self.context.get("request"), username=email, password=password)
+        if not user:
+            raise serializers.ValidationError("Invalid email or password")
+        elif password and not user.check_password(password):
+            raise serializers.ValidationError("Invalid email or password")
+        elif not user.check_password(password):
+            raise serializers.ValidationError("Invalid email or password")
+        elif not user.is_active:
+            raise serializers.ValidationError("User account is disabled")
+        refresh = RefreshToken.for_user(user)
+        return {
+            "user": user,
+            "access": str(refresh.access_token),
+            "refresh": str(refresh)
+        }    
+        
+class CommonUserResponseSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    email = serializers.EmailField(max_length=255)
+    role = serializers.CharField(max_length=255)
+        
+class LoginResponseSerializer(serializers.Serializer):
+    message = serializers.CharField()
+    access_token = serializers.CharField()
+    refresh_token = serializers.CharField()
+    user = CommonUserResponseSerializer()
