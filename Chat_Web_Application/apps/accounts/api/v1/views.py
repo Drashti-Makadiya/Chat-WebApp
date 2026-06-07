@@ -20,7 +20,7 @@ class RegisterView(APIView):
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
-            print("User created:", user)
+            print("User:", user)
             return api_response(success=True, message="User registered successfully", data=None, status_code=201)
         return api_response(success=False, message="Registration failed", errors=serializer.errors, status_code=400)
     
